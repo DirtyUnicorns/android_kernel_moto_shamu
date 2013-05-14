@@ -378,6 +378,7 @@ static void blkg_destroy_all(struct request_queue *q)
  * local to groups like group stats and group rate limits.
  */
 void __blkg_release_rcu(struct rcu_head *rcu_head)
+
 {
 	struct blkcg_gq *blkg = container_of(rcu_head, struct blkcg_gq, rcu_head);
 	int i;
@@ -391,7 +392,9 @@ void __blkg_release_rcu(struct rcu_head *rcu_head)
 	}
 
 void __blkg_release(struct blkcg_gq *blkg)
+
 {
+	struct blkcg_gq *blkg = container_of(rcu_head, struct blkcg_gq, rcu_head);
 	int i;
 
 	/* tell policies that this one is being freed */
