@@ -390,6 +390,18 @@ void __blkg_release_rcu(struct rcu_head *rcu_head)
 			pol->pd_exit_fn(blkg);
 	}
 
+void __blkg_release(struct blkcg_gq *blkg)
+{
+	int i;
+
+	/* tell policies that this one is being freed */
+	for (i = 0; i < BLKCG_MAX_POLS; i++) {
+		struct blkcg_policy *pol = blkcg_policy[i];
+
+		if (blkg->pd[i] && pol->pd_exit_fn)
+			pol->pd_exit_fn(blkg);
+	}
+
 	/* release the blkcg and parent blkg refs this blkg has been holding */
 	css_put(&blkg->blkcg->css);
 	if (blkg->parent) {
