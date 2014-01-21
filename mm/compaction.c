@@ -696,6 +696,7 @@ static void isolate_freepages(struct zone *zone,
 	 * is using.
 	 */
 	pfn = cc->free_pfn & ~(pageblock_nr_pages-1);
+	pfn = cc->free_pfn;
 	low_pfn = ALIGN(cc->migrate_pfn + 1, pageblock_nr_pages);
 
 	/*
