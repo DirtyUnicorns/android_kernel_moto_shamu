@@ -1419,6 +1419,7 @@ static void ffs_data_reset(struct ffs_data *ffs)
 static int functionfs_bind(struct ffs_data *ffs, struct usb_composite_dev *cdev)
 {
 	struct usb_gadget_strings **lang;
+	int first_id;
 
 	ENTER();
 
@@ -1445,11 +1446,13 @@ static int functionfs_bind(struct ffs_data *ffs, struct usb_composite_dev *cdev)
 	ffs->ep0req->context = ffs;
 
 	lang = ffs->stringtabs;
-	for (lang = ffs->stringtabs; *lang; ++lang) {
-		struct usb_string *str = (*lang)->strings;
-		int id = ffs->first_id;
-		for (; str->s; ++id, ++str)
-			str->id = id;
+	if (lang) {
+		for (; *lang; ++lang) {
+			struct usb_string *str = (*lang)->strings;
+			int id = first_id;
+			for (; str->s; ++id, ++str)
+				str->id = id;
+		}
 	}
 
 	ffs->gadget = cdev->gadget;
