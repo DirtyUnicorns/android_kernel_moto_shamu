@@ -728,10 +728,6 @@ int nci_register_device(struct nci_dev *ndev)
 	struct device *dev = &ndev->nfc_dev->dev;
 	char name[32];
 
-	rc = nfc_register_device(ndev->nfc_dev);
-	if (rc)
-		goto exit;
-
 	ndev->flags = 0;
 
 	INIT_WORK(&ndev->cmd_work, nci_cmd_work);
@@ -739,7 +735,7 @@ int nci_register_device(struct nci_dev *ndev)
 	ndev->cmd_wq = create_singlethread_workqueue(name);
 	if (!ndev->cmd_wq) {
 		rc = -ENOMEM;
-		goto unreg_exit;
+		goto exit;
 	}
 
 	INIT_WORK(&ndev->rx_work, nci_rx_work);
@@ -769,6 +765,10 @@ int nci_register_device(struct nci_dev *ndev)
 
 	mutex_init(&ndev->req_lock);
 
+	rc = nfc_register_device(ndev->nfc_dev);
+	if (rc)
+		goto destroy_rx_wq_exit;
+
 	goto exit;
 
 destroy_rx_wq_exit:
@@ -776,9 +776,6 @@ destroy_rx_wq_exit:
 
 destroy_cmd_wq_exit:
 	destroy_workqueue(ndev->cmd_wq);
-
-unreg_exit:
-	nfc_unregister_device(ndev->nfc_dev);
 
 exit:
 	return rc;
