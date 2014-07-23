@@ -1367,6 +1367,12 @@ static void cleanup_instance(struct msm_vidc_inst *inst)
 				kfree(buf);
 				mutex_lock(&inst->lock);
 			}
+			mutex_unlock(&inst->lock);
+			if (msm_comm_release_scratch_buffers(inst, false))
+				dprintk(VIDC_ERR,
+					"Failed to release scratch buffers\n");
+
+			mutex_lock(&inst->lock);
 		}
 		if (!list_empty(&inst->persistbufs)) {
 			list_for_each_safe(ptr, next, &inst->persistbufs) {
