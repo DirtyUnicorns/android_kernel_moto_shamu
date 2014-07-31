@@ -892,6 +892,9 @@ static void wcd9xxx_report_plug(struct wcd9xxx_mbhc *mbhc, int insertion,
 		hphlocp_off_report(mbhc, SND_JACK_OC_HPHL);
 		mbhc->current_plug = PLUG_TYPE_NONE;
 		mbhc->polling_active = false;
+		if (mbhc->mbhc_cb && mbhc->mbhc_cb->hph_auto_pulldown_ctrl)
+			mbhc->mbhc_cb->hph_auto_pulldown_ctrl(mbhc->codec,
+								false);
 	} else {
 		/*
 		 * Report removal of current jack type.
@@ -917,7 +920,13 @@ static void wcd9xxx_report_plug(struct wcd9xxx_mbhc *mbhc, int insertion,
 					    0, WCD9XXX_JACK_MASK);
 			mbhc->hph_status &= ~(SND_JACK_HEADSET |
 						SND_JACK_LINEOUT |
-						SND_JACK_ANC_HEADPHONE);
+						SND_JACK_ANC_HEADPHONE |
+						SND_JACK_UNSUPPORTED);
+			if (mbhc->mbhc_cb &&
+				 mbhc->mbhc_cb->hph_auto_pulldown_ctrl)
+				mbhc->mbhc_cb->hph_auto_pulldown_ctrl(
+								mbhc->codec,
+								false);
 		}
 
 		/* Report insertion */
@@ -3194,8 +3203,18 @@ static void wcd9xxx_correct_swch_plug(struct work_struct *work)
 	}
 
 	if (!correction && current_source_enable)
+	if (plug_type == PLUG_TYPE_HEADPHONE) {
+		if (mbhc->mbhc_cb && mbhc->mbhc_cb->hph_auto_pulldown_ctrl)
+			mbhc->mbhc_cb->hph_auto_pulldown_ctrl(codec, true);
+	}
+
+	if (!correction && current_source_enable) {
+		WCD9XXX_BCL_LOCK(mbhc->resmgr);
 		wcd9xxx_turn_onoff_current_source(mbhc, &mbhc->mbhc_bias_regs,
 						  false, highhph);
+
+        }
+
 	else if (!correction)
 		wcd9xxx_turn_onoff_override(mbhc, false);
 
