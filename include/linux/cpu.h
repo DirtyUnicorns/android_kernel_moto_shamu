@@ -26,6 +26,19 @@ struct cpu {
 	struct device dev;
 };
 
+struct cpu_pstate_pwr {
+	unsigned int freq;
+	uint32_t power;
+};
+
+struct cpu_pwr_stats {
+	int cpu;
+	long temp;
+	bool throttling;
+	struct cpu_pstate_pwr *ptable;
+	int len;
+};
+
 extern int register_cpu(struct cpu *cpu, int num);
 extern struct device *get_cpu_device(unsigned cpu);
 extern bool cpu_is_hotpluggable(unsigned cpu);
