@@ -2,7 +2,7 @@
 #define _LINUX_SCHED_H
 
 #include <uapi/linux/sched.h>
-
+#include <linux/atomic.h>
 
 struct sched_param {
 	int sched_priority;
@@ -62,6 +62,16 @@ struct bio_list;
 struct fs_struct;
 struct perf_event_context;
 struct blk_plug;
+
+/* This structure is used to share information and statistics with other
+ * frameworks. It only shares wake up latency fro the moment but should be
+ * extended with other usefull informations
+ */
+struct sched_pm {
+	atomic_t  wake_latency; /* time to wake up the cpu */
+};
+
+DECLARE_PER_CPU(struct sched_pm, sched_stat);
 
 /*
  * List of flags we want to share for kernel threads,
@@ -780,6 +790,7 @@ enum cpu_idle_type {
 #define SD_BALANCE_WAKE		0x0010  /* Balance on wakeup */
 #define SD_WAKE_AFFINE		0x0020	/* Wake task to waking CPU */
 #define SD_SHARE_CPUPOWER	0x0080	/* Domain members share cpu power */
+#define SD_SHARE_POWERDOMAIN	0x0100	/* Domain members share power domain */
 #define SD_SHARE_PKG_RESOURCES	0x0200	/* Domain members share cpu pkg resources */
 #define SD_SERIALIZE		0x0400	/* Only a single load balancing instance */
 #define SD_ASYM_PACKING		0x0800  /* Place busy groups earlier in the domain */
