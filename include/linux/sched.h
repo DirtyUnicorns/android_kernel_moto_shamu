@@ -4,6 +4,7 @@
 #include <uapi/linux/sched.h>
 
 #include <linux/sched/prio.h>
+#include <linux/atomic.h>
 
 struct sched_param {
 	int sched_priority;
