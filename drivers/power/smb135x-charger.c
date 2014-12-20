@@ -1538,7 +1538,6 @@ static int smb135x_set_usb_chg_current(struct smb135x_chg *chip,
 		rc |= smb135x_path_suspend(chip, USB, CURRENT, false);
 		goto out;
 	}
-	if (current_ma == CURRENT_500_MA) {
 
 #ifdef CONFIG_FORCE_FAST_CHARGE
 		if (force_fast_charge)
@@ -1547,11 +1546,14 @@ static int smb135x_set_usb_chg_current(struct smb135x_chg *chip,
 #endif
 			rc = smb135x_masked_write(chip, CFG_5_REG, USB_2_3_BIT, 0);
 	
+	if (current_ma == CURRENT_500_MA) {
+		rc = smb135x_masked_write(chip, CFG_5_REG, USB_2_3_BIT, USB_2_3_BIT);
 		rc |= smb135x_masked_write(chip, CMD_INPUT_LIMIT,
 				USB_100_500_AC_MASK, USB_500_VAL);
 		rc |= smb135x_path_suspend(chip, USB, CURRENT, false);
 		goto out;
 	}
+
 	if (current_ma == CURRENT_900_MA) {
 		rc = smb135x_masked_write(chip, CFG_5_REG,
 						USB_2_3_BIT, USB_2_3_BIT);
