@@ -901,6 +901,21 @@ static void update_rq_clock_task(struct rq *rq, s64 delta)
 		rq->prev_steal_time_rq += steal;
 
 		delta -= steal;
+	/*
+	 * Changed load_scale_factor can trigger reclassification of tasks as
+	 * big or small. Make this change "atomic" so that tasks are accounted
+	 * properly due to changed load_scale_factor
+	 */
+	pre_big_small_task_count_change(cpu_possible_mask);
+	for_each_cpu(i, cpus) {
+		struct rq *rq = cpu_rq(i);
+		u64 max_possible_capacity;
+
+		rq->capacity = compute_capacity(i);
+		max_possible_capacity = div_u64(((u64) rq->capacity) *
+					rq->max_possible_freq, rq->max_freq);
+		rq->max_possible_capacity = (int) max_possible_capacity;
+		rq->load_scale_factor = compute_load_scale_factor(i);
 	}
 #endif
 
