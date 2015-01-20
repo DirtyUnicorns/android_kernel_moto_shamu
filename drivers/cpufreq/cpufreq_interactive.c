@@ -415,6 +415,9 @@ static void cpufreq_interactive_timer(unsigned long data)
 		if (pcpu->policy->cur < tunables->hispeed_freq &&
 		    cpu_load <= MAX_LOCAL_LOAD) {
 			new_freq = tunables->hispeed_freq;
+
+	cpufreq_notify_utilization(pcpu->policy, cpu_load);
+
 		} else {
 			new_freq = choose_freq(pcpu, loadadjfreq);
 
