@@ -433,8 +433,6 @@ static ssize_t store_##file_name					\
 	if (ret)							\
 		return -EINVAL;						\
 									\
-	new_policy.min = new_policy.user_policy.min;			\
-	new_policy.max = new_policy.user_policy.max;			\
 									\
 	ret = sscanf(buf, "%u", &new_policy.object);			\
 	if (ret != 1)							\
@@ -443,9 +441,8 @@ static ssize_t store_##file_name					\
 	ret = cpufreq_driver->verify(&new_policy);			\
 	if (ret)							\
 		pr_err("cpufreq: Frequency verification failed\n");	\
+		policy->user_policy.object = new_policy.object; \
 									\
-	policy->user_policy.min = new_policy.min;			\
-	policy->user_policy.max = new_policy.max;			\
 									\
 	ret = cpufreq_set_policy(policy, &new_policy);		\
 									\
@@ -1807,6 +1804,22 @@ int cpufreq_driver_target(struct cpufreq_policy *policy,
 	return ret;
 }
 EXPORT_SYMBOL_GPL(cpufreq_driver_target);
+
+int __cpufreq_driver_getavg(struct cpufreq_policy *policy, unsigned int cpu)
+{
+    int ret = 0;
+
+    policy = cpufreq_cpu_get(policy->cpu);
+    if (!policy)
+    return -EINVAL;
+
+    if (cpu_online(cpu) && cpufreq_driver->getavg)
+    ret = cpufreq_driver->getavg(policy, cpu);
+
+    cpufreq_cpu_put(policy);
+    return ret;
+}
+EXPORT_SYMBOL_GPL(__cpufreq_driver_getavg);
 
 /*
  * when "event" is CPUFREQ_GOV_LIMITS
