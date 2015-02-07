@@ -31,6 +31,7 @@
 #include <linux/debugfs.h>
 #include <asm/unaligned.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/moduleparam.h>
 
 #include "xhci.h"
 
