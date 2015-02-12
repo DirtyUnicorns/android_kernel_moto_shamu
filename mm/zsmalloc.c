@@ -1778,6 +1778,7 @@ EXPORT_SYMBOL_GPL(zs_compact);
  * On success, a pointer to the newly created pool is returned,
  * otherwise NULL.
  */
+
 struct zs_pool *zs_create_pool(char *name, gfp_t flags)
 {
 	int i;
