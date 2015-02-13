@@ -1759,7 +1759,7 @@ static int mdss_fb_open(struct fb_info *info, int user)
 		pr_err_once("Shutdown pending. Aborting operation. Request from pid:%d name=%s\n",
 			pid, task->comm);
 		sysfs_notify(&mfd->fbi->dev->kobj, NULL, "show_blank_event");
-		return -EPERM;
+		return -ESHUTDOWN;
 	}
 
 	list_for_each_entry(pinfo, &mfd->proc_list, list) {
