@@ -543,7 +543,7 @@ DECLARE_PER_CPU(struct rq, runqueues);
 #define cpu_curr(cpu)		(cpu_rq(cpu)->curr)
 #define raw_rq()		(&__raw_get_cpu_var(runqueues))
 
-#ifdef CONFIG_INTELLI_PLUG
+#ifdef CONFIG_INTELLI_HOTPLUG
 struct nr_stats_s {
 	/* time-based average load */
 	u64 nr_last_stamp;
@@ -1111,7 +1111,7 @@ static inline u64 steal_ticks(u64 steal)
 }
 #endif
 
-#ifdef CONFIG_INTELLI_PLUG
+#ifdef CONFIG_INTELLI_HOTPLUG
 static inline unsigned int do_avg_nr_running(struct rq *rq)
 {
 
@@ -1134,18 +1134,20 @@ static inline unsigned int do_avg_nr_running(struct rq *rq)
 
 static inline void inc_nr_running(struct rq *rq)
 {
-#ifdef CONFIG_INTELLI_PLUG
+
+#ifdef CONFIG_INTELLI_HOTPLUG
 	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
 #endif
-
 	sched_update_nr_prod(cpu_of(rq), rq->nr_running, true);
-#ifdef CONFIG_INTELLI_PLUG
+#ifdef CONFIG_INTELLI_HOTPLUG
 	write_seqcount_begin(&nr_stats->ave_seqcnt);
 	nr_stats->ave_nr_running = do_avg_nr_running(rq);
 	nr_stats->nr_last_stamp = rq->clock_task;
 #endif
-	sched_update_nr_prod(cpu_of(rq), 1, true);
 	rq->nr_running++;
+#ifdef CONFIG_INTELLI_HOTPLUG
+	write_seqcount_end(&nr_stats->ave_seqcnt);
+#endif
 
 #ifdef CONFIG_NO_HZ_FULL
 	if (rq->nr_running == 2) {
@@ -1163,19 +1165,18 @@ static inline void inc_nr_running(struct rq *rq)
 
 static inline void dec_nr_running(struct rq *rq)
 {
-#ifdef CONFIG_INTELLI_PLUG
+
+#ifdef CONFIG_INTELLI_HOTPLUG
 	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
 #endif
-
 	sched_update_nr_prod(cpu_of(rq), rq->nr_running, false);
-#ifdef CONFIG_INTELLI_PLUG
+#ifdef CONFIG_INTELLI_HOTPLUG
 	write_seqcount_begin(&nr_stats->ave_seqcnt);
 	nr_stats->ave_nr_running = do_avg_nr_running(rq);
 	nr_stats->nr_last_stamp = rq->clock_task;
 #endif
-	sched_update_nr_prod(cpu_of(rq), 1, false);
 	rq->nr_running--;
-#ifdef CONFIG_INTELLI_PLUG
+#ifdef CONFIG_INTELLI_HOTPLUG
 	write_seqcount_end(&nr_stats->ave_seqcnt);
 #endif
 }
