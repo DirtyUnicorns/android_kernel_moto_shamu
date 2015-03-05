@@ -360,6 +360,7 @@ struct mdss_panel_info {
 	bool hbm_feature_enabled;
 	bool hbm_state;
 	bool is_split_display;
+	bool hbm_off_state;
 
 	uint32_t panel_dead;
 
