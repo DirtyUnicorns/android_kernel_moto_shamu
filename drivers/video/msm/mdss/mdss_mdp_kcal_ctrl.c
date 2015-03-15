@@ -61,6 +61,21 @@ static int mdss_mdp_kcal_display_commit(void)
 	return ret;
 }
 
+static bool mdss_mdp_kcal_is_panel_on(void)
+{
+	int i;
+	struct mdss_mdp_ctl *ctl;
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+
+	for (i = 0; i < mdata->nctl; i++) {
+		ctl = mdata->ctl_off + i;
+		if (mdss_mdp_ctl_is_power_on(ctl))
+			return true;
+	}
+
+	return false;
+}
+
 static void mdss_mdp_kcal_update_pcc(struct kcal_lut_data *lut_data)
 {
 	u32 copyback = 0;
@@ -172,6 +187,9 @@ static ssize_t kcal_store(struct device *dev, struct device_attribute *attr,
 		(kcal_g < 1 || kcal_g > 256) || (kcal_b < 1 || kcal_b > 256))
 		return -EINVAL;
 
+	if (!mdss_mdp_kcal_is_panel_on())
+		return -EINVAL;
+
 	lut_data->red = kcal_r;
 	lut_data->green = kcal_g;
 	lut_data->blue = kcal_b;
@@ -203,6 +221,9 @@ static ssize_t kcal_min_store(struct device *dev,
 	if ((r) || (kcal_min < 1 || kcal_min > 256))
 		return -EINVAL;
 
+	if (!mdss_mdp_kcal_is_panel_on())
+		return -EINVAL;
+
 	lut_data->minimum = kcal_min;
 
 	mdss_mdp_kcal_update_pcc(lut_data);
@@ -228,6 +249,9 @@ static ssize_t kcal_enable_store(struct device *dev,
 	r = kstrtoint(buf, 10, &kcal_enable);
 	if ((r) || (kcal_enable != 0 && kcal_enable != 1) ||
 		(lut_data->enable == kcal_enable))
+		return -EINVAL;
+
+	if (!mdss_mdp_kcal_is_panel_on())
 		return -EINVAL;
 
 	lut_data->enable = kcal_enable;
@@ -258,6 +282,9 @@ static ssize_t kcal_invert_store(struct device *dev,
 		(lut_data->invert == kcal_invert))
 		return -EINVAL;
 
+	if (!mdss_mdp_kcal_is_panel_on())
+		return -EINVAL;
+
 	lut_data->invert = kcal_invert;
 
 	mdss_mdp_kcal_update_pcc(lut_data);
@@ -282,6 +309,9 @@ static ssize_t kcal_sat_store(struct device *dev,
 
 	r = kstrtoint(buf, 10, &kcal_sat);
 	if ((r) || ((kcal_sat < 224 || kcal_sat > 383) && kcal_sat != 128))
+		return -EINVAL;
+
+	if (!mdss_mdp_kcal_is_panel_on())
 		return -EINVAL;
 
 	lut_data->sat = kcal_sat;
@@ -310,6 +340,9 @@ static ssize_t kcal_hue_store(struct device *dev,
 	if ((r) || (kcal_hue < 0 || kcal_hue > 1536))
 		return -EINVAL;
 
+	if (!mdss_mdp_kcal_is_panel_on())
+		return -EINVAL;
+
 	lut_data->hue = kcal_hue;
 
 	mdss_mdp_kcal_update_pa(lut_data);
@@ -336,6 +369,9 @@ static ssize_t kcal_val_store(struct device *dev,
 	if ((r) || (kcal_val < 128 || kcal_val > 383))
 		return -EINVAL;
 
+	if (!mdss_mdp_kcal_is_panel_on())
+		return -EINVAL;
+
 	lut_data->val = kcal_val;
 
 	mdss_mdp_kcal_update_pa(lut_data);
@@ -360,6 +396,9 @@ static ssize_t kcal_cont_store(struct device *dev,
 
 	r = kstrtoint(buf, 10, &kcal_cont);
 	if ((r) || (kcal_cont < 128 || kcal_cont > 383))
+		return -EINVAL;
+
+	if (!mdss_mdp_kcal_is_panel_on())
 		return -EINVAL;
 
 	lut_data->cont = kcal_cont;
