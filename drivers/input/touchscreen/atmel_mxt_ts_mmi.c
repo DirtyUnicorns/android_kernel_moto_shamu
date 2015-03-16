@@ -2463,20 +2463,9 @@ static void mxt_set_sensor_state(struct mxt_data *data, int state)
 		/* drop flag to allow object specific message handling */
 		if (data->in_bootloader)
 			data->in_bootloader = false;
-#ifdef CONFIG_STATE_NOTIFIER
-		state_notifier_call_chain(STATE_NOTIFIER_QUERY, NULL);
-#endif
-		break;
 	case STATE_UNKNOWN:
-#ifdef CONFIG_STATE_NOTIFIER
-		state_notifier_call_chain(STATE_NOTIFIER_UNKNOWN, NULL);
-#endif
-		break;
 	case STATE_FLASH:
 		/* no special handling for these states */
-#ifdef CONFIG_STATE_NOTIFIER
-		state_notifier_call_chain(STATE_NOTIFIER_FLASH, NULL);
-#endif
 		break;
 
 	case STATE_SUSPEND:
@@ -2486,10 +2475,10 @@ static void mxt_set_sensor_state(struct mxt_data *data, int state)
 		if (!data->in_bootloader)
 			mxt_sensor_state_config(data, SUSPEND_IDX);
 #ifdef CONFIG_STATE_NOTIFIER
-		state_notifier_call_chain(STATE_NOTIFIER_SUSPEND, NULL);
+		if (!use_fb_notifier)
+			state_notifier_call_chain(STATE_NOTIFIER_SUSPEND, NULL);
 #endif
 		break;
-#endif
 
 	case STATE_ACTIVE:
 		if (!data->in_bootloader)
@@ -2501,15 +2490,13 @@ static void mxt_set_sensor_state(struct mxt_data *data, int state)
 			pr_debug("Non-persistent mode; restoring default\n");
 		}
 #ifdef CONFIG_STATE_NOTIFIER
-		state_notifier_call_chain(STATE_NOTIFIER_ACTIVE, NULL);
+		if (!use_fb_notifier)
+			state_notifier_call_chain(STATE_NOTIFIER_ACTIVE, NULL);
 #endif
 		break;
 
 	case STATE_STANDBY:
 		mxt_irq_enable(data, false);
-#ifdef CONFIG_STATE_NOTIFIER
-		state_notifier_call_chain(STATE_NOTIFIER_STANDBY, NULL);
-#endif
 		break;
 
 	case STATE_BL:
@@ -2517,18 +2504,12 @@ static void mxt_set_sensor_state(struct mxt_data *data, int state)
 			data->in_bootloader = true;
 
 		mxt_irq_enable(data, false);
-#ifdef CONFIG_STATE_NOTIFIER
-		state_notifier_call_chain(STATE_NOTIFIER_BL, NULL);
-#endif
 		break;
 
 	case STATE_INIT:
 		/* set flag to avoid object specific message handling */
 		if (!data->in_bootloader)
 			data->in_bootloader = true;
-#ifdef CONFIG_STATE_NOTIFIER
-		state_notifier_call_chain(STATE_NOTIFIER_INIT, NULL);
-#endif
 		break;
 	}
 
