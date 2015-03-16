@@ -244,6 +244,17 @@ static void __ref decide_hotplug_func(struct work_struct *work)
 reschedule:
 	queue_delayed_work(wq, &decide_hotplug,
 		msecs_to_jiffies(t->timer * HZ));
+
+	return;
+
+reschedule:
+	/*
+	 * This reschedule is specially for cases where the user wants to
+	 * run either dual-core or quad-core permanently - for that reason
+	 * we don't need to run this work every 100ms, but rather just
+	 * once every 2 seconds
+	 */
+	queue_delayed_work(wq, &decide_hotplug, HZ * 2);
 }
 
 /*
