@@ -173,7 +173,7 @@ static __ref void max_screenoff(bool screenoff)
 	
 	if (screenoff) {
 		max_freq_plug = cpufreq_quick_get_max(0);
-		freq = max_freq_screenoff;
+		freq = min(max_freq_screenoff, max_freq_plug);
 
 		cancel_delayed_work_sync(&dyn_work);
 		
