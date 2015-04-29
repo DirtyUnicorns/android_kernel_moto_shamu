@@ -19,9 +19,8 @@ config CPU_IDLE_MULTIPLE_DRIVERS
          states. If unsure say N.
 
 config CPU_IDLE_GOV_LADDER
-	bool
-	depends on CPU_IDLE
-	default y
+	bool "Ladder governor (for periodic timer tick)"
+	default n
 
 config CPU_IDLE_GOV_MENU
 	bool
