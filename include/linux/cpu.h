@@ -277,6 +277,10 @@ static inline int disable_nonboot_cpus(void) { return 0; }
 static inline void enable_nonboot_cpus(void) {}
 #endif /* !CONFIG_PM_SLEEP_SMP */
 
+struct cpu_pwr_stats *get_cpu_pwr_stats(void);
+void trigger_cpu_pwr_stats_calc(void);
+int register_cpu_pwr_stats_ready_notifier(struct notifier_block *nb);
+
 enum cpuhp_state {
 	CPUHP_OFFLINE,
 	CPUHP_ONLINE,
