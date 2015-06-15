@@ -279,11 +279,6 @@ static int tz_start(struct devfreq *devfreq)
 	unsigned int t1, t2 = 2 * HIST;
 	int i, out, ret;
 
-	if (devfreq->data == NULL) {
-		pr_err(TAG "data is required for this governor\n");
-		return -EINVAL;
-	}
-
 	priv = devfreq->data;
 	priv->nb.notifier_call = tz_notify;
 
@@ -329,6 +324,8 @@ static int tz_stop(struct devfreq *devfreq)
 	struct devfreq_msm_adreno_tz_data *priv = devfreq->data;
 
 	kgsl_devfreq_del_notifier(devfreq->dev.parent, &priv->nb);
+	/* leaving the governor and cleaning the pointer to private data */
+	devfreq->data = NULL;
 	return 0;
 }
 
