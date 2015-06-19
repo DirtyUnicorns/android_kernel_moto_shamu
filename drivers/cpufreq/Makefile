@@ -1,3 +1,5 @@
+CFLAGS_cpufreq_impulse.o := -Wno-unused-value
+
 # CPUfreq core
 obj-$(CONFIG_CPU_FREQ)			+= cpufreq.o freq_table.o
 # CPUfreq stats
