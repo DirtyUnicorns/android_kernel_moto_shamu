@@ -1,3 +1,5 @@
+CFLAGS_governor_msm_adreno_tz.o := -Wno-unused-function
+
 obj-$(CONFIG_PM_DEVFREQ)	+= devfreq.o
 obj-$(CONFIG_DEVFREQ_GOV_SIMPLE_ONDEMAND)	+= governor_simpleondemand.o
 obj-$(CONFIG_DEVFREQ_GOV_PERFORMANCE)	+= governor_performance.o
