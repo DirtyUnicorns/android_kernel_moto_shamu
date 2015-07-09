@@ -66,6 +66,10 @@ static DEFINE_SPINLOCK(tz_lock);
 #define TZ_UPDATE_ID		0x4
 #define TZ_INIT_ID		0x6
 
+#define TZ_RESET_ID_64          0x7
+#define TZ_UPDATE_ID_64         0x8
+#define TZ_INIT_ID_64           0x9
+
 #define TAG "msm_adreno_tz: "
 
 /* Trap into the TrustZone, and call funcs there. */
