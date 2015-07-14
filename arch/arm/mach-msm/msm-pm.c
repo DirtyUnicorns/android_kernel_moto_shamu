@@ -317,6 +317,10 @@ static bool __ref msm_pm_spm_power_collapse(
 
 	collapsed = save_cpu_regs ?
 		!cpu_suspend(0, msm_pm_collapse) : msm_pm_pc_hotplug();
+#else
+	collapsed = save_cpu_regs ?
+		!__cpu_suspend(0, msm_pm_collapse) : msm_pm_pc_hotplug();
+#endif
 
 	if (save_cpu_regs) {
 		spin_lock(&cpu_cnt_lock);
