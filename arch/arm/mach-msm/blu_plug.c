@@ -37,6 +37,7 @@
 #define MAX_CORES_SCREENOFF (2)
 #define MAX_FREQ_SCREENOFF (1190400)
 #define MAX_FREQ_PLUG (2649600)
+#define DEF_PLUG_THRESHOLD 0
 
 static unsigned int up_threshold = UP_THRESHOLD;;
 static unsigned int delay = DELAY;
@@ -49,6 +50,7 @@ static unsigned int up_timer_cnt = DEF_UP_TIMER_CNT;
 static unsigned int max_cores_screenoff = MAX_CORES_SCREENOFF;
 static unsigned int max_freq_screenoff = MAX_FREQ_SCREENOFF;
 static unsigned int max_freq_plug = MAX_FREQ_PLUG;
+static unsigned int plug_threshold[MAX_ONLINE] = {[0 ... MAX_ONLINE-1] = DEF_PLUG_THRESHOLD};
 
 static struct delayed_work dyn_work;
 static struct workqueue_struct *dyn_workq;
@@ -95,12 +97,15 @@ out:
 	up_timer = 0;
 }
 
-/* Iterate through online CPUs and put offline the lowest loaded one */
+/* Iterate through online CPUs and take offline the lowest loaded one */
 static inline void down_one(void)
 {
 	unsigned int cpu;
 	unsigned int l_cpu = 0;
 	unsigned int l_freq = ~0;
+	unsigned int p_cpu = 0;
+	unsigned int p_thres = 0;
+	bool all_equal = false;
 
 	/* Min online CPUs, return */
 	if (num_online_cpus() == min_online)
@@ -108,7 +113,19 @@ static inline void down_one(void)
 
 	get_online_cpus();
 
-	for_each_online_cpu(cpu)
+	for_each_online_cpu(cpu) {
+		unsigned int thres = plug_threshold[cpu];
+		
+		if (!cpu || thres == p_thres) {
+			p_thres = thres;
+			p_cpu = cpu;
+			all_equal = true;
+		} else if (thres > p_thres) {
+			p_thres = thres;
+			p_cpu = cpu;
+			all_equal = false;
+		}
+		
 		if (cpu) {
 			unsigned int cur = cpufreq_quick_get(cpu);
 
@@ -117,10 +134,14 @@ static inline void down_one(void)
 				l_cpu = cpu;
 			}
 		}
+	}
 
 	put_online_cpus();
 
-	cpu_down(l_cpu);
+	if (all_equal)
+		cpu_down(l_cpu);
+	else
+		cpu_down(p_cpu);
 out:
 	down_timer = 0;
 	up_timer = 0;
@@ -425,6 +446,9 @@ static struct kernel_param_ops up_timer_cnt_ops = {
 };
 
 module_param_cb(up_timer_cnt, &up_timer_cnt_ops, &up_timer_cnt, 0644);
+
+/* plug_threshold */
+module_param_array(plug_threshold, uint, NULL, 0644);
 
 /***************** end of module parameters *****************/
 
