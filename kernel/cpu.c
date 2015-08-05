@@ -148,6 +148,7 @@ void cpu_hotplug_disable(void)
 	cpu_hotplug_disabled++;
 	cpu_maps_update_done();
 }
+EXPORT_SYMBOL_GPL(cpu_hotplug_disable);
 
 void cpu_hotplug_enable(void)
 {
@@ -155,6 +156,7 @@ void cpu_hotplug_enable(void)
 	WARN_ON(--cpu_hotplug_disabled < 0);
 	cpu_maps_update_done();
 }
+EXPORT_SYMBOL_GPL(cpu_hotplug_enable);
 
 #else /* #if CONFIG_HOTPLUG_CPU */
 static void cpu_hotplug_begin(void) {}
