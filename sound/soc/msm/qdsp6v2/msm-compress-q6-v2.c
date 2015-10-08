@@ -31,7 +31,6 @@
 #include <asm/dma.h>
 #include <linux/dma-mapping.h>
 #include <linux/msm_audio_ion.h>
-#include <linux/pm_wakeup.h>
 
 #include <sound/timer.h>
 #include <sound/tlv.h>
@@ -186,8 +185,6 @@ struct mmi_eq_vals mmifx[MSM_FRONTEND_DAI_MAX];
 struct msm_compr_dec_params {
 	struct snd_dec_ddp ddp_params;
 };
-
-static struct wakeup_source drain_wake_lock;
 
 static int msm_compr_send_dec_params(struct snd_compr_stream *cstream,
 				     struct msm_compr_dec_params *dec_params,
@@ -919,8 +916,6 @@ static int msm_compr_open(struct snd_compr_stream *cstream)
 
 	spin_lock_init(&prtd->lock);
 
-	wakeup_source_init(&drain_wake_lock, "drain");
-
 	atomic_set(&prtd->eos, 0);
 	atomic_set(&prtd->start, 0);
 	atomic_set(&prtd->drain, 0);
@@ -980,6 +975,8 @@ static int msm_compr_free(struct snd_compr_stream *cstream)
 		pr_err("%s prtd is null\n", __func__);
 		return 0;
 	}
+	prtd->cmd_interrupt = 1;
+	wake_up(&prtd->drain_wait);
 	pdata = snd_soc_platform_get_drvdata(soc_prtd->platform);
 	ac = prtd->audio_client;
 	if (!pdata || !ac) {
@@ -1039,7 +1036,6 @@ static int msm_compr_free(struct snd_compr_stream *cstream)
 		atomic_read(&pdata->audio_ocmem_req));
 	q6asm_audio_client_buf_free_contiguous(dir, ac);
 
-	wakeup_source_trash(&drain_wake_lock);
 	q6asm_audio_client_free(ac);
 
 	kfree(pdata->audio_effects[soc_prtd->dai_link->be_id]);
@@ -1194,13 +1190,12 @@ static int msm_compr_drain_buffer(struct msm_compr_audio *prtd,
 	spin_unlock_irqrestore(&prtd->lock, *flags);
 	pr_debug("%s: wait for buffer to be drained\n",  __func__);
 
-	__pm_stay_awake(&drain_wake_lock);
 	rc = wait_event_interruptible(prtd->drain_wait,
 					prtd->drain_ready ||
 					prtd->cmd_interrupt ||
 					atomic_read(&prtd->xrun) ||
 					atomic_read(&prtd->error));
-	__pm_relax(&drain_wake_lock);
+
 	pr_debug("%s: out of buffer drain wait with ret %d\n", __func__, rc);
 	spin_lock_irqsave(&prtd->lock, *flags);
 	if (prtd->cmd_interrupt) {
@@ -1665,6 +1660,12 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 				 __func__);
 			break;
 		}
+
+		spin_lock_irqsave(&prtd->lock, flags);
+		prtd->gapless_state.stream_opened[stream_index] = 1;
+		prtd->gapless_state.set_next_stream_id = true;
+		spin_unlock_irqrestore(&prtd->lock, flags);
+
 		rc = msm_compr_send_media_format_block(cstream, stream_id);
 		if (rc < 0) {
 			pr_err("%s, failed to send media format block\n",
@@ -1673,10 +1674,6 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 		}
 		msm_compr_send_dec_params(cstream, pdata->dec_params[fe_id],
 					  stream_id);
-		spin_lock_irqsave(&prtd->lock, flags);
-		prtd->gapless_state.stream_opened[stream_index] = 1;
-		prtd->gapless_state.set_next_stream_id = true;
-		spin_unlock_irqrestore(&prtd->lock, flags);
 		break;
 	}
 
