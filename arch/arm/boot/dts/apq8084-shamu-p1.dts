@@ -49,7 +49,3 @@
 		};
 	};
 };
-
-&pma8084_lvs4 {
-	regulator-always-on;
-};
