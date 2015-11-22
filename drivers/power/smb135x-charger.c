@@ -29,6 +29,10 @@
 #include <linux/regulator/machine.h>
 #include <linux/reboot.h>
 #include <linux/qpnp/qpnp-adc.h>
+#include <linux/moduleparam.h>
+
+static bool use_wlock = true;
+module_param(use_wlock, bool, 0644);
 
 #define SMB135X_BITS_PER_REG	8
 
@@ -444,7 +448,7 @@ static int smb135x_setup_vbat_monitoring(struct smb135x_chg *chip);
 
 static void smb_stay_awake(struct smb_wakeup_source *source)
 {
-	if (__test_and_clear_bit(0, &source->disabled)) {
+	if (use_wlock && __test_and_clear_bit(0, &source->disabled)) {
 		__pm_stay_awake(&source->source);
 		pr_debug("enabled source %s\n", source->source.name);
 	}
@@ -1542,10 +1546,10 @@ static int smb135x_set_usb_chg_current(struct smb135x_chg *chip,
 #ifdef CONFIG_FORCE_FAST_CHARGE
 		if (force_fast_charge)
 			rc = smb135x_masked_write(chip, CFG_5_REG, USB_2_3_BIT, USB_2_3_BIT);
-		else
+        else
 #endif
 			rc = smb135x_masked_write(chip, CFG_5_REG, USB_2_3_BIT, 0);
-	
+
 	if (current_ma == CURRENT_500_MA) {
 		rc = smb135x_masked_write(chip, CFG_5_REG, USB_2_3_BIT, USB_2_3_BIT);
 		rc |= smb135x_masked_write(chip, CMD_INPUT_LIMIT,
