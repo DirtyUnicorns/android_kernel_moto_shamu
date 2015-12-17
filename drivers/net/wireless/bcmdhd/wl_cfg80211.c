@@ -7689,6 +7689,25 @@ exit:
 }
 #endif /* WL_SUPPORT_ACS */
 
+int wl_cfg80211_set_cqm_rssi_config(struct wiphy *wiphy,
+				    struct net_device *dev,
+				    s32 rssi_thold, u32 rssi_hyst)
+{
+	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
+	int err = 0;
+	int start;
+	int8 max_rssi = (int8)(rssi_thold + rssi_hyst);
+	int8 min_rssi = (int8)rssi_thold;
+
+	start = rssi_thold | rssi_hyst;
+	if (dhd_dev_set_rssi_monitor_cfg(bcmcfg_to_prmry_ndev(cfg),
+					 start, max_rssi, min_rssi) < 0) {
+		WL_ERR(("Could not set rssi monitor cfg\n"));
+		err = -EINVAL;
+	}
+	return err;
+}
+
 static struct cfg80211_ops wl_cfg80211_ops = {
 	.add_virtual_intf = wl_cfg80211_add_virtual_iface,
 	.del_virtual_intf = wl_cfg80211_del_virtual_iface,
@@ -7722,6 +7741,7 @@ static struct cfg80211_ops wl_cfg80211_ops = {
 	.mgmt_tx = wl_cfg80211_mgmt_tx,
 	.mgmt_frame_register = wl_cfg80211_mgmt_frame_register,
 	.change_bss = wl_cfg80211_change_bss,
+	.set_cqm_rssi_config = wl_cfg80211_set_cqm_rssi_config,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 6, 0))
 	.set_channel = wl_cfg80211_set_channel,
 #endif
@@ -8660,6 +8680,9 @@ static s32 wl_handle_rssi_monitor_event(struct bcm_cfg80211 *cfg, bcm_struct_cfg
 			wl_cfgvendor_send_async_event(wiphy, ndev,
 				GOOGLE_RSSI_MONITOR_EVENT,
 				&monitor_data, sizeof(monitor_data));
+			cfg80211_cqm_rssi_notify(ndev,
+					NL80211_CQM_RSSI_THRESHOLD_EVENT_LOW,
+					GFP_KERNEL);
 		} else {
 			WL_ERR(("Version mismatch %d, expected %d", evt_data->version,
 			       RSSI_MONITOR_VERSION));
