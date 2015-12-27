@@ -1,8 +1,10 @@
+
 /*
- * Simple IO scheduler
+ * Simple IO scheduler plus
  * Based on Noop, Deadline and V(R) IO schedulers.
  *
  * Copyright (C) 2012 Miguel Boton <mboton@gmail.com>
+ *           (C) 2013, 2014 Boy Petersen <boypetersen@gmail.com>
  *
  *
  * This algorithm does not do any kind of sorting, as it is aimed for
@@ -12,6 +14,8 @@
  * Asynchronous and synchronous requests are not treated separately, but
  * we relay on deadlines to ensure fairness.
  *
+ * The plus version incorporates several fixes and logic improvements.
+ *
  */
 #include <linux/blkdev.h>
 #include <linux/elevator.h>
@@ -19,18 +23,19 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/version.h>
+#include <linux/slab.h>
 
 enum { ASYNC, SYNC };
 
 /* Tunables */
-static const int sync_read_expire  = 1000;	/* max time before a sync read is submitted. */
-static const int sync_write_expire = 5000;	/* max time before a sync write is submitted. */
+static const int sync_read_expire = (HZ / 4);	/* max time before a sync read is submitted. */
+static const int sync_write_expire = (HZ / 4) * 5;	/* max time before a sync write is submitted. */
 
-static const int async_read_expire  =  4 * HZ;	/* ditto for async, these limits are SOFT! */
-static const int async_write_expire = 16 * HZ;	/* ditto for async, these limits are SOFT! */
+static const int async_read_expire = (HZ / 2);	/* ditto for async, these limits are SOFT! */
+static const int async_write_expire = (HZ * 2);	/* ditto for async, these limits are SOFT! */
 
-static const int writes_starved = 2;		/* max times reads can starve a write */
-static const int fifo_batch     = 8;		/* # of sequential requests treated as one
+static const int writes_starved = 1;		/* max times reads can starve a write */
+static const int fifo_batch     = 3;		/* # of sequential requests treated as one
 						   by the above parameters. For throughput. */
 
 /* Elevator data */
@@ -82,6 +87,18 @@ sio_add_request(struct request_queue *q, struct request *rq)
 	list_add_tail(&rq->queuelist, &sd->fifo_list[sync][data_dir]);
 }
 
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,38)
+static int
+sio_queue_empty(struct request_queue *q)
+{
+	struct sio_data *sd = q->elevator->elevator_data;
+
+	/* Check if fifo lists are empty */
+	return list_empty(&sd->fifo_list[SYNC][READ]) && list_empty(&sd->fifo_list[SYNC][WRITE]) &&
+	       list_empty(&sd->fifo_list[ASYNC][READ]) && list_empty(&sd->fifo_list[ASYNC][WRITE]);
+}
+#endif
+
 static struct request *
 sio_expired_request(struct sio_data *sd, int sync, int data_dir)
 {
@@ -95,7 +112,7 @@ sio_expired_request(struct sio_data *sd, int sync, int data_dir)
 	rq = rq_entry_fifo(list->next);
 
 	/* Request has expired */
-	if (time_after(jiffies, rq_fifo_time(rq)))
+	if (time_after_eq(jiffies, rq_fifo_time(rq)))
 		return rq;
 
 	return NULL;
@@ -105,6 +122,9 @@ static struct request *
 sio_choose_expired_request(struct sio_data *sd)
 {
 	struct request *rq;
+
+	/* Reset (non-expired-)batch-counter */
+	sd->batched = 0;
 
 	/*
 	 * Check expired requests.
@@ -125,6 +145,7 @@ sio_choose_expired_request(struct sio_data *sd)
 	if (rq)
 		return rq;
 
+
 	return NULL;
 }
 
@@ -133,6 +154,9 @@ sio_choose_request(struct sio_data *sd, int data_dir)
 {
 	struct list_head *sync = sd->fifo_list[SYNC];
 	struct list_head *async = sd->fifo_list[ASYNC];
+
+	/* Increase (non-expired-)batch-counter */
+	sd->batched++;
 
 	/*
 	 * Retrieve request from available fifo list.
@@ -155,6 +179,7 @@ sio_choose_request(struct sio_data *sd, int data_dir)
 static inline void
 sio_dispatch_request(struct sio_data *sd, struct request *rq)
 {
+
 	/*
 	 * Remove the request from the fifo list
 	 * and dispatch it.
@@ -162,12 +187,13 @@ sio_dispatch_request(struct sio_data *sd, struct request *rq)
 	rq_fifo_clear(rq);
 	elv_dispatch_add_tail(rq->q, rq);
 
-	sd->batched++;
-
-	if (rq_data_dir(rq))
+	if (rq_data_dir(rq)) {
 		sd->starved = 0;
-	else
-		sd->starved++;
+	} else {
+		if (!list_empty(&sd->fifo_list[SYNC][WRITE]) || 
+				!list_empty(&sd->fifo_list[ASYNC][WRITE]))
+			sd->starved++;
+	}
 }
 
 static int
@@ -181,14 +207,12 @@ sio_dispatch_requests(struct request_queue *q, int force)
 	 * Retrieve any expired request after a batch of
 	 * sequential requests.
 	 */
-	if (sd->batched > sd->fifo_batch) {
-		sd->batched = 0;
+	if (sd->batched >= sd->fifo_batch)
 		rq = sio_choose_expired_request(sd);
-	}
 
 	/* Retrieve request */
 	if (!rq) {
-		if (sd->starved > sd->writes_starved)
+		if (sd->starved >= sd->writes_starved)
 			data_dir = WRITE;
 
 		rq = sio_choose_request(sd, data_dir);
@@ -236,20 +260,16 @@ static int sio_init_queue(struct request_queue *q, struct elevator_type *e)
 	struct elevator_queue *eq;
 
 	eq = elevator_alloc(q, e);
-	if (eq == NULL)
+	if (!eq)
 		return -ENOMEM;
 
 	/* Allocate structure */
 	sd = kmalloc_node(sizeof(*sd), GFP_KERNEL, q->node);
-	if (sd == NULL) {
+	if (!sd) {
 		kobject_put(&eq->kobj);
 		return -ENOMEM;
 	}
 	eq->elevator_data = sd;
-
-	spin_lock_irq(q->queue_lock);
-	q->elevator = eq;
-	spin_unlock_irq(q->queue_lock);
 
 	/* Initialize fifo lists */
 	INIT_LIST_HEAD(&sd->fifo_list[SYNC][READ]);
@@ -264,6 +284,11 @@ static int sio_init_queue(struct request_queue *q, struct elevator_type *e)
 	sd->fifo_expire[ASYNC][READ] = async_read_expire;
 	sd->fifo_expire[ASYNC][WRITE] = async_write_expire;
 	sd->fifo_batch = fifo_batch;
+	sd->writes_starved = writes_starved;
+
+	spin_lock_irq(q->queue_lock);
+	q->elevator = eq;
+	spin_unlock_irq(q->queue_lock);
 
 	return 0;
 }
@@ -338,8 +363,8 @@ STORE_FUNCTION(sio_sync_read_expire_store, &sd->fifo_expire[SYNC][READ], 0, INT_
 STORE_FUNCTION(sio_sync_write_expire_store, &sd->fifo_expire[SYNC][WRITE], 0, INT_MAX, 1);
 STORE_FUNCTION(sio_async_read_expire_store, &sd->fifo_expire[ASYNC][READ], 0, INT_MAX, 1);
 STORE_FUNCTION(sio_async_write_expire_store, &sd->fifo_expire[ASYNC][WRITE], 0, INT_MAX, 1);
-STORE_FUNCTION(sio_fifo_batch_store, &sd->fifo_batch, 0, INT_MAX, 0);
-STORE_FUNCTION(sio_writes_starved_store, &sd->writes_starved, 0, INT_MAX, 0);
+STORE_FUNCTION(sio_fifo_batch_store, &sd->fifo_batch, 1, INT_MAX, 0);
+STORE_FUNCTION(sio_writes_starved_store, &sd->writes_starved, 1, INT_MAX, 0);
 #undef STORE_FUNCTION
 
 #define DD_ATTR(name) \
@@ -356,11 +381,14 @@ static struct elv_fs_entry sio_attrs[] = {
 	__ATTR_NULL
 };
 
-static struct elevator_type iosched_sio = {
+static struct elevator_type iosched_sioplus = {
 	.ops = {
 		.elevator_merge_req_fn		= sio_merged_requests,
 		.elevator_dispatch_fn		= sio_dispatch_requests,
 		.elevator_add_req_fn		= sio_add_request,
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,38)
+		.elevator_queue_empty_fn	= sio_queue_empty,
+#endif
 		.elevator_former_req_fn		= sio_former_request,
 		.elevator_latter_req_fn		= sio_latter_request,
 		.elevator_init_fn		= sio_init_queue,
@@ -368,30 +396,27 @@ static struct elevator_type iosched_sio = {
 	},
 
 	.elevator_attrs = sio_attrs,
-	.elevator_name = "sio",
+	.elevator_name = "sioplus",
 	.elevator_owner = THIS_MODULE,
 };
 
-static int __init sio_init(void)
+static int __init sioplus_init(void)
 {
 	/* Register elevator */
-	return elv_register(&iosched_sio);
+	elv_register(&iosched_sioplus);
+
+	return 0;
 }
 
-static void __exit sio_exit(void)
+static void __exit sioplus_exit(void)
 {
 	/* Unregister elevator */
-	elv_unregister(&iosched_sio);
+	elv_unregister(&iosched_sioplus);
 }
 
-#ifdef CONFIG_FAST_RESUME
-beforeresume_initcall(sio_init);
-#else
-module_init(sio_init);
-#endif
-module_exit(sio_exit);
+module_init(sioplus_init);
+module_exit(sioplus_exit);
 
 MODULE_AUTHOR("Miguel Boton");
 MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("Simple IO scheduler");
-MODULE_VERSION("0.2");
+MODULE_DESCRIPTION("Simple IO scheduler plus");
