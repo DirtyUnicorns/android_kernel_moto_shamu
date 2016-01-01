@@ -1288,7 +1288,7 @@ static struct msm_ipc_server *msm_ipc_router_create_server(
 	INIT_LIST_HEAD(&server->server_port_list);
 	list_add_tail(&server->list, &server_list[key]);
 	scnprintf(server->pdev_name, sizeof(server->pdev_name),
-		  "QMI%08x:%08x", service, instance);
+		  "SVC%08x:%08x", service, instance);
 	server->next_pdev_id = 1;
 
 create_srv_port:
@@ -2767,8 +2767,11 @@ int msm_ipc_router_read_msg(struct msm_ipc_port *port_ptr,
 	}
 
 	*data = msm_ipc_router_skb_to_buf(pkt->pkt_fragment_q, ret);
-	if (!(*data))
+	if (!(*data)) {
 		IPC_RTR_ERR("%s: Buf conversion failed\n", __func__);
+		release_pkt(pkt);
+		return -ENOMEM;
+	}
 
 	*len = ret;
 	release_pkt(pkt);
