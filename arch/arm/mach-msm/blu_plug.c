@@ -500,6 +500,9 @@ static int set_enabled(const char *val, const struct kernel_param *kp)
 		return -EINVAL;
 	if (i < 0 || i > 1)
 		return 0;
+		
+	if (i == blu_plug_enabled)
+		return i;
 
 	ret = param_set_uint(val, kp);
 	blu_plug_enabled = i;
