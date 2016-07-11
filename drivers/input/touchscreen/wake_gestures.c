@@ -94,8 +94,6 @@ int vib_strength = VIB_STRENGTH;
 
 static struct input_dev * wake_dev;
 static DEFINE_MUTEX(pwrkeyworklock);
-static struct workqueue_struct *s2w_input_wq;
-static struct workqueue_struct *dt2w_input_wq;
 static struct work_struct s2w_input_work;
 static struct work_struct dt2w_input_work;
 static struct wake_lock dt2w_wakelock;
@@ -460,7 +458,7 @@ static void wg_input_event(struct input_handle *handle, unsigned int type,
 	if (code == ABS_MT_TRACKING_ID && value == -1) {
 		sweep2wake_reset();
 		touch_cnt = true;
-		queue_work_on(0, dt2w_input_wq, &dt2w_input_work);
+		schedule_work_on(0, &dt2w_input_work);
 		return;
 	}
 
@@ -477,11 +475,11 @@ static void wg_input_event(struct input_handle *handle, unsigned int type,
 	if (touch_x_called && touch_y_called) {
 		touch_x_called = false;
 		touch_y_called = false;
-		queue_work_on(0, s2w_input_wq, &s2w_input_work);
+		schedule_work_on(0, &s2w_input_work);
 	} else if (!scr_suspended() && touch_x_called && !touch_y_called) {
 		touch_x_called = false;
 		touch_y_called = false;
-		queue_work_on(0, s2w_input_wq, &s2w_input_work);
+		schedule_work_on(0, &s2w_input_work);
 	}
 }
 
@@ -687,31 +685,21 @@ static int __init wake_gestures_init(void)
 	if (rc)
 		pr_err("%s: Failed to register wg_input_handler\n", __func__);
 
-	s2w_input_wq = create_workqueue("s2wiwq");
-	if (!s2w_input_wq) {
-		pr_err("%s: Failed to create s2wiwq workqueue\n", __func__);
-		return -EFAULT;
-	}
 	INIT_WORK(&s2w_input_work, s2w_input_callback);
-		
-	dt2w_input_wq = create_workqueue("dt2wiwq");
-	if (!dt2w_input_wq) {
-		pr_err("%s: Failed to create dt2wiwq workqueue\n", __func__);
-		return -EFAULT;
-	}
+
 	INIT_WORK(&dt2w_input_work, dt2w_input_callback);
-		
+
 	wake_lock_init(&dt2w_wakelock, WAKE_LOCK_SUSPEND, "dt2w_wakelock");
-		
+
 	dt2w_switch = get_internal_dt();
-		
+
 #if (WAKE_GESTURES_ENABLED)
 	gesture_dev = input_allocate_device();
 	if (!gesture_dev) {
 		pr_err("Can't allocate gesture device\n");
 		goto err_alloc_dev;
 	}
-	
+
 	gesture_dev->name = "wake_gesture";
 	gesture_dev->phys = "wake_gesture/input0";
 	input_set_capability(gesture_dev, EV_REL, WAKE_GESTURE);
@@ -763,11 +751,9 @@ static void __exit wake_gestures_exit(void)
 {
 	kobject_del(android_touch_kobj);
 	input_unregister_handler(&wg_input_handler);
-	destroy_workqueue(s2w_input_wq);
-	destroy_workqueue(dt2w_input_wq);
 	input_free_device(wake_dev);
 	wake_lock_destroy(&dt2w_wakelock);
-#if (WAKE_GESTURES_ENABLED)	
+#if (WAKE_GESTURES_ENABLED)
 	input_unregister_device(gesture_dev);
 	input_free_device(gesture_dev);
 #endif
