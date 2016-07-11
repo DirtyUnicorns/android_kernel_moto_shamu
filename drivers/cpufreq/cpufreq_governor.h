@@ -196,6 +196,8 @@ struct cs_dbs_tuners {
 	unsigned int input_boost_freq;
 	u64 input_boost_duration;
 	unsigned int sleep_depth;
+	unsigned int boost_enabled;
+	unsigned int boost_count;
 };
 
 struct ex_dbs_tuners {
