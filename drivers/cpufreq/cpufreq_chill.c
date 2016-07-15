@@ -20,17 +20,17 @@
 
 /* Chill version macros */
 #define CHILL_VERSION_MAJOR			(1)
-#define CHILL_VERSION_MINOR			(3)
+#define CHILL_VERSION_MINOR			(6)
 
 /* Chill governor macros */
-#define DEF_FREQUENCY_UP_THRESHOLD		(80)
-#define DEF_FREQUENCY_DOWN_THRESHOLD		(20)
+#define DEF_FREQUENCY_UP_THRESHOLD		(85)
+#define DEF_FREQUENCY_DOWN_THRESHOLD		(30)
 #define DEF_FREQUENCY_DOWN_THRESHOLD_SUSPENDED	(20)
 #define DEF_FREQUENCY_STEP			(5)
-#define DEF_SLEEP_DEPTH				(1)
+#define DEF_SLEEP_DEPTH				(2)
 #define DEF_SAMPLING_RATE			(20000)
 #define DEF_BOOST_ENABLED			(1)
-#define DEF_BOOST_COUNT				(3)
+#define DEF_BOOST_COUNT				(7)
 
 static DEFINE_PER_CPU(struct cs_cpu_dbs_info_s, cs_cpu_dbs_info);
 
@@ -86,7 +86,7 @@ static void cs_check_cpu(int cpu, unsigned int load)
 
 		/* Boost if count is reached, otherwise increase freq */
 		if (cs_tuners->boost_enabled && boost_counter >= cs_tuners->boost_count)
-			dbs_info->requested_freq += get_freq_target(cs_tuners, policy->max);
+			dbs_info->requested_freq = policy->max;
 		else
 			dbs_info->requested_freq += get_freq_target(cs_tuners, policy);
 
@@ -133,7 +133,6 @@ static void cs_dbs_timer(struct work_struct *work)
 	struct cs_dbs_tuners *cs_tuners = dbs_data->tuners;
 	int delay = delay_for_sampling_rate(cs_tuners->sampling_rate);
 	bool modify_all = true;
-	unsigned int sampling_rate_suspended = cs_tuners->sampling_rate * cs_tuners->sleep_depth;
 
 	mutex_lock(&core_dbs_info->cdbs.timer_mutex);
 
@@ -309,6 +308,9 @@ static ssize_t store_sleep_depth(struct dbs_data *dbs_data, const char *buf,
 	if (input > 5)
 		input = 5;
 
+	if (input < 1)
+		input = 1;
+
 	cs_tuners->sleep_depth = input;
 	return count;
 }
@@ -347,7 +349,9 @@ static ssize_t store_boost_count(struct dbs_data *dbs_data, const char *buf,
 	if (input >= 5)
 		input = 5;
 
-	if (input = 0)
+	if (input >= 1)
+		input = 1;
+	else
 		input = 0;
 
 	cs_tuners->boost_count = input;
@@ -508,4 +512,3 @@ fs_initcall(cpufreq_gov_dbs_init);
 module_init(cpufreq_gov_dbs_init);
 #endif
 module_exit(cpufreq_gov_dbs_exit);
-
