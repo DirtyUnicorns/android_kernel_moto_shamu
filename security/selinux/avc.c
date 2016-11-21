@@ -746,7 +746,7 @@ noinline int slow_avc_audit(u32 ssid, u32 tsid, u16 tclass,
 	struct selinux_audit_data sad;
 
 	/* Only log permissive=1 messages for SECURITY_SELINUX_DEVELOP */
-	if (!IS_ENABLED(CONFIG_SECURITY_SELINUX_DEVELOP) && denied && !result)
+	if (denied && !result)
 		return 0;
 
 	if (!a) {
