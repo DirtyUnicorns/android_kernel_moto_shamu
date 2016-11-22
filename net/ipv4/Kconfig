@@ -448,6 +448,7 @@ config INET_DIAG_DESTROY
 
 menuconfig TCP_CONG_ADVANCED
 	bool "TCP: advanced congestion control"
+	default y
 	---help---
 	  Support for selection of various TCP congestion control
 	  modules.
@@ -461,7 +462,7 @@ if TCP_CONG_ADVANCED
 
 config TCP_CONG_BIC
 	tristate "Binary Increase Congestion (BIC) control"
-	default m
+	default n
 	---help---
 	BIC-TCP is a sender-side only change that ensures a linear RTT
 	fairness under large windows while offering both scalability and
@@ -483,7 +484,7 @@ config TCP_CONG_CUBIC
 
 config TCP_CONG_WESTWOOD
 	tristate "TCP Westwood+"
-	default m
+	default n
 	---help---
 	TCP Westwood+ is a sender-side only modification of the TCP Reno
 	protocol stack that optimizes the performance of TCP congestion
@@ -497,7 +498,7 @@ config TCP_CONG_WESTWOOD
 
 config TCP_CONG_HTCP
         tristate "H-TCP"
-        default m
+        default n
 	---help---
 	H-TCP is a send-side only modifications of the TCP Reno
 	protocol stack that optimizes the performance of TCP
@@ -618,6 +619,21 @@ choice
 	config DEFAULT_WESTWOOD
 		bool "Westwood" if TCP_CONG_WESTWOOD=y
 
+	config DEFAULT_LP
+		bool "Lp"  if TCP_CONG_LP=y
+
+	config DEFAULT_ILLINOIS
+		bool "Illinois"  if TCP_CONG_ILLINOIS=y
+
+	config DEFAULT_YEAH
+		bool "Yeah"  if TCP_CONG_YEAH=y
+
+	config DEFAULT_SCALABLE
+		bool "Scalable"  if TCP_CONG_SCALABLE=y
+
+	config DEFAULT_HSTCP
+		bool "Hstcp"  if TCP_CONG_HSTCP=y
+
 	config DEFAULT_RENO
 		bool "Reno"
 
@@ -640,6 +656,11 @@ config DEFAULT_TCP_CONG
 	default "westwood" if DEFAULT_WESTWOOD
 	default "veno" if DEFAULT_VENO
 	default "reno" if DEFAULT_RENO
+	default "lp" if DEFAULT_LP
+	default "illinois" if DEFAULT_ILLINOIS
+	default "hstcp" if DEFAULT_HSTCP
+	default "scalable" if DEFAULT_SCALABLE
+	default "yeah" if DEFAULT_YEAH
 	default "cubic"
 
 config TCP_MD5SIG
