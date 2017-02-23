@@ -379,6 +379,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
 		   -fno-delete-null-pointer-checks \
+		   -mtune=cortex-a15 -mfpu=neon-vfpv4 \
 		   -Wno-array-bounds \
 		   -std=gnu89
 
