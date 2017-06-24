@@ -383,6 +383,20 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Wno-array-bounds \
 		   -std=gnu89 -fno-pic
 
+# shamu optimization setup
+KBUILD_CFLAGS	+= -O2 -g0 -DNDEBUG \
+		   -fgraphite \
+		   -fgraphite-identity \
+		   -fivopts \
+		   -floop-block \
+		   -floop-interchange \
+		   -floop-strip-mine \
+		   -fmodulo-sched \
+		   -fmodulo-sched-allow-regmoves \
+		   -fomit-frame-pointer \
+		   -ftree-loop-distribution \
+		   -ftree-loop-linear
+
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
 KBUILD_AFLAGS   := -D__ASSEMBLY__
