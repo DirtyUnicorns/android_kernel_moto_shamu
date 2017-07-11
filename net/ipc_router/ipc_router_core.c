@@ -841,6 +841,8 @@ static int post_pkt_to_port(struct msm_ipc_port *port_ptr,
 	struct rr_packet *temp_pkt = pkt;
 	void (*notify)(unsigned event, void *oob_data,
 		       size_t oob_data_len, void *priv);
+	void (*data_ready)(struct sock *sk) = NULL;
+	struct sock *sk;
 
 	if (unlikely(!port_ptr || !pkt))
 		return -EINVAL;
@@ -864,6 +866,9 @@ static int post_pkt_to_port(struct msm_ipc_port *port_ptr,
 	mutex_unlock(&port_ptr->port_rx_q_lock_lhb3);
 	if (notify)
 		notify(pkt->hdr.type, NULL, 0, port_ptr->priv);
+	else if (sk && data_ready)
+		data_ready(sk);
+
 	return 0;
 }
 
