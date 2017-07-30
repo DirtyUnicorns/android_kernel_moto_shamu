@@ -3502,6 +3502,7 @@ CONFIG_NLS_ISO8859_1=y
 # CONFIG_NLS_UTF8 is not set
 # CONFIG_DLM is not set
 CONFIG_ASYNC_FSYNC=y
+CONFIG_DYNAMIC_FSYNC=y
 
 #
 # Kernel hacking
