@@ -4933,7 +4933,7 @@
 		qcom,ibat-monitor {
 			high-threshold-uamp = <3000000>;
 			low-threshold-uamp = <1000000>;
-			mitigation-freq-khz = <1958400>;
+			mitigation-freq-khz = <2265600>;
 			mitigation-gpu-freq-khz = <389000>;
 			max-gpu-freq-khz = <600000>;
 			ibat-channel = <0x15>;
@@ -5016,7 +5016,7 @@
 
 		msm_thermal_freq: qcom,vdd-apps-rstr{
 			qcom,vdd-rstr-reg = "vdd-apps";
-			qcom,levels = <1958400 2150400 2150400>;
+			qcom,levels = <2265600 2342400 2342400>;
 			qcom,freq-req;
 		};
 	};
