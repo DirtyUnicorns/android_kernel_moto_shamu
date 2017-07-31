@@ -22,7 +22,6 @@
 #include <linux/sched.h>
 #include <linux/timer.h>
 #include <linux/fb.h>
-#include <soc/qcom/cpufreq.h>
 #include <linux/cpufreq.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
